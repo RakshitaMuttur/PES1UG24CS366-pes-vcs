@@ -63,35 +63,21 @@ int object_exists(const ObjectID *id) {
 
 // ─── TODO: Implement these ──────────────────────────────────────────────────
 
+static const char *object_type_name(ObjectType type) {
+    switch (type) {
+        case OBJ_BLOB:   return "blob";
+        case OBJ_TREE:   return "tree";
+        case OBJ_COMMIT: return "commit";
+        default:         return NULL;
+    }
+}
+
 // Write an object to the store.
 //
 // Object format on disk:
 //   "<type> <size>\0<data>"
 //   where <type> is "blob", "tree", or "commit"
 //   and <size> is the decimal string of the data length
-//
-// Steps:
-//   1. Build the full object: header ("blob 16\0") + data
-//   2. Compute SHA-256 hash of the FULL object (header + data)
-//   3. Check if object already exists (deduplication) — if so, just return success
-//   4. Create shard directory (.pes/objects/XX/) if it doesn't exist
-//   5. Write to a temporary file in the same shard directory
-//   6. fsync() the temporary file to ensure data reaches disk
-//   7. rename() the temp file to the final path (atomic on POSIX)
-//   8. Open and fsync() the shard directory to persist the rename
-//   9. Store the computed hash in *id_out
-
-// HINTS - Useful syscalls and functions for this phase:
-//   - sprintf / snprintf : formatting the header string
-//   - compute_hash       : hashing the combined header + data
-//   - object_exists      : checking for deduplication
-//   - mkdir              : creating the shard directory (use mode 0755)
-//   - open, write, close : creating and writing to the temp file
-//                          (Use O_CREAT | O_WRONLY | O_TRUNC, mode 0644)
-//   - fsync              : flushing the file descriptor to disk
-//   - rename             : atomically moving the temp file to the final path
-//
-
 //
 // Returns 0 on success, -1 on error.
 
@@ -107,11 +93,17 @@ static const char *object_type_name(ObjectType type) {
 
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
     const char *type_name = object_type_name(type);
+<<<<<<< HEAD
     if (!type_name || !data || !id_out) return -1;
+=======
+    if (!type_name || !id_out) return -1;
+    if (len > 0 && data == NULL) return -1;
+>>>>>>> 3dab50f (Complete PES VCS implementation)
 
     char header[64];
     int header_len = snprintf(header, sizeof(header), "%s %zu", type_name, len);
     if (header_len < 0 || (size_t)header_len + 1 > sizeof(header)) return -1;
+<<<<<<< HEAD
     header_len += 1;   // include '\0'
 
     size_t full_len = (size_t)header_len + len;
@@ -120,6 +112,18 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 
     memcpy(full_obj, header, (size_t)header_len);
     memcpy(full_obj + header_len, data, len);
+=======
+    header_len += 1;  // include '\0'
+
+    size_t full_len = (size_t)header_len + len;
+    unsigned char *full_obj = malloc(full_len);
+    if (!full_obj) return -1;
+
+    memcpy(full_obj, header, (size_t)header_len);
+    if (len > 0) {
+        memcpy(full_obj + header_len, data, len);
+    }
+>>>>>>> 3dab50f (Complete PES VCS implementation)
 
     ObjectID id;
     compute_hash(full_obj, full_len, &id);
@@ -137,7 +141,15 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     hash_to_hex(&id, hex);
 
     char shard_dir[512];
+<<<<<<< HEAD
     snprintf(shard_dir, sizeof(shard_dir), "%s/%.2s", OBJECTS_DIR, hex);
+=======
+    int dir_len = snprintf(shard_dir, sizeof(shard_dir), "%s/%.2s", OBJECTS_DIR, hex);
+    if (dir_len < 0 || (size_t)dir_len >= sizeof(shard_dir)) {
+        free(full_obj);
+        return -1;
+    }
+>>>>>>> 3dab50f (Complete PES VCS implementation)
 
     if (mkdir(shard_dir, 0755) != 0 && errno != EEXIST) {
         free(full_obj);
@@ -145,7 +157,16 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     }
 
     char temp_path[512];
+<<<<<<< HEAD
     snprintf(temp_path, sizeof(temp_path), "%s/tmp-%ld-%d", shard_dir, (long)getpid(), rand());
+=======
+    int tmp_len = snprintf(temp_path, sizeof(temp_path),
+                           "%s/tmp-%ld-%d", shard_dir, (long)getpid(), rand());
+    if (tmp_len < 0 || (size_t)tmp_len >= sizeof(temp_path)) {
+        free(full_obj);
+        return -1;
+    }
+>>>>>>> 3dab50f (Complete PES VCS implementation)
 
     int fd = open(temp_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if (fd < 0) {
@@ -206,18 +227,13 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 //   5. Set *type_out to the parsed ObjectType
 //   6. Allocate a buffer, copy the data portion (after the \0), set *data_out and *len_out
 //
-// HINTS - Useful syscalls and functions for this phase:
-//   - object_path        : getting the target file path
-//   - fopen, fread, fseek: reading the file into memory
-//   - memchr             : safely finding the '\0' separating header and data
-//   - strncmp            : parsing the type string ("blob", "tree", "commit")
-//   - compute_hash       : re-hashing the read data for integrity verification
-//   - memcmp             : comparing the computed hash against the requested hash
-//   - malloc, memcpy     : allocating and returning the extracted data
-//
 // The caller is responsible for calling free(*data_out).
+<<<<<<< HEAD
 // Returns 0 on success, -1 on error (file not found, corrupt, etc.).
 
+=======
+// Returns 0 on success, -1 on error.
+>>>>>>> 3dab50f (Complete PES VCS implementation)
 int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_t *len_out) {
     if (!id || !type_out || !data_out || !len_out) return -1;
 
@@ -240,11 +256,11 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
 
     rewind(f);
 
-    uint8_t *buffer = malloc((size_t)file_size);
-    if (!buffer) {
-        fclose(f);
-        return -1;
-    }
+unsigned char *buffer = malloc((size_t)file_size);
+if (!buffer) {
+    fclose(f);
+    return -1;
+}
 
     if (fread(buffer, 1, (size_t)file_size, f) != (size_t)file_size) {
         free(buffer);
@@ -260,7 +276,11 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
+<<<<<<< HEAD
     uint8_t *nul = memchr(buffer, '\0', (size_t)file_size);
+=======
+    unsigned char *nul = memchr(buffer, '\0', (size_t)file_size);
+>>>>>>> 3dab50f (Complete PES VCS implementation)
     if (!nul) {
         free(buffer);
         return -1;
@@ -272,6 +292,10 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         free(buffer);
         return -1;
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3dab50f (Complete PES VCS implementation)
     memcpy(header, buffer, header_len);
     header[header_len] = '\0';
 
@@ -282,10 +306,20 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
+<<<<<<< HEAD
     if (strcmp(type_str, "blob") == 0) *type_out = OBJ_BLOB;
     else if (strcmp(type_str, "tree") == 0) *type_out = OBJ_TREE;
     else if (strcmp(type_str, "commit") == 0) *type_out = OBJ_COMMIT;
     else {
+=======
+    if (strcmp(type_str, "blob") == 0) {
+        *type_out = OBJ_BLOB;
+    } else if (strcmp(type_str, "tree") == 0) {
+        *type_out = OBJ_TREE;
+    } else if (strcmp(type_str, "commit") == 0) {
+        *type_out = OBJ_COMMIT;
+    } else {
+>>>>>>> 3dab50f (Complete PES VCS implementation)
         free(buffer);
         return -1;
     }
@@ -296,13 +330,23 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
+<<<<<<< HEAD
     void *payload = malloc(payload_len ? payload_len : 1);
+=======
+    void *payload = malloc(payload_len > 0 ? payload_len : 1);
+>>>>>>> 3dab50f (Complete PES VCS implementation)
     if (!payload) {
         free(buffer);
         return -1;
     }
 
+<<<<<<< HEAD
     memcpy(payload, nul + 1, payload_len);
+=======
+    if (payload_len > 0) {
+        memcpy(payload, nul + 1, payload_len);
+    }
+>>>>>>> 3dab50f (Complete PES VCS implementation)
 
     *data_out = payload;
     *len_out = payload_len;
