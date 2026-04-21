@@ -68,7 +68,7 @@ int tree_parse(const void *data, size_t len, Tree *tree_out) {
         const uint8_t *null_byte = memchr(ptr, '\0', end - ptr);
         if (!null_byte) return -1; // Malformed data
 
-        size_t name_len = null_byte - ptr;
+        size_t name_len = (size_t)(null_byte - ptr);
         if (name_len >= sizeof(entry->name)) return -1;
         memcpy(entry->name, ptr, name_len);
         entry->name[name_len] = '\0'; // Ensure null-terminated
