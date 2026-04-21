@@ -23,6 +23,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <errno.h>
+#include <stdint.h>
+
+// object.c functions (declare here in case pes.h does not expose them)
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
+void hash_to_hex(const ObjectID *id, char *hex_out);
+int hex_to_hash(const char *hex, ObjectID *id_out);
 
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
