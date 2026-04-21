@@ -10,11 +10,18 @@
 //   "100644 hello.txt\0" followed by 32 raw bytes of SHA-256
 
 #include "tree.h"
+#include "index.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <stdint.h>
+
+// object_write is implemented in object.c.
+// Declare it here in case pes.h does not already expose the prototype.
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 
 // ─── Mode Constants ─────────────────────────────────────────────────────────
 
@@ -50,10 +57,10 @@ int tree_parse(const void *data, size_t len, Tree *tree_out) {
 
         // Parse mode into an isolated buffer
         char mode_str[16] = {0};
-        size_t mode_len = space - ptr;
+        size_t mode_len = (size_t)(space - ptr);
         if (mode_len >= sizeof(mode_str)) return -1;
         memcpy(mode_str, ptr, mode_len);
-        entry->mode = strtol(mode_str, NULL, 8);
+        entry->mode = (uint32_t)strtol(mode_str, NULL, 8);
 
         ptr = space + 1; // Skip space
 
